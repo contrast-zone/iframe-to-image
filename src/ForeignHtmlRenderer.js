@@ -1,10 +1,22 @@
 /**
  * 
- * @param {StyleSheetList} styleSheets 
+ * @param {Object} iframe 
  */
-const ForeignHtmlRenderer = function(styleSheets) {
+const iframetoimage = function(iframe) {
     
     const self = this;
+    
+    const base = document.createElement('base');
+    base.href = iframe.src;
+                            
+    const contentDocument = iframe.contentDocument;
+    const body = contentDocument.body;
+
+    let styleSheets = contentDocument.styleSheets;
+    let contentHtml = contentDocument.body.innerHTML;
+    
+    const width = body.scrollLeft + body.scrollWidth;
+    const height = body.scrollTop + body.scrollHeight;    
 
     /**
      * 
@@ -149,31 +161,48 @@ const ForeignHtmlRenderer = function(styleSheets) {
 
     /**
      * 
-     * @param {String} contentHtml 
-     * @param {Number} width
-     * @param {Number} height
+     * @param {StyleSheet} styleSheet
+     * @returns {String|urlList}
+     */
+    const findUrlsInCss = function(styleSheet) {
+        let cssStyles = "";
+        let urlsFoundInCss = [];
+
+        for(let i=0; i<styleSheet.cssRules.length; i++) {
+            const rule = styleSheet.cssRules[i];
+            if (!rule.conditionText) {
+                const cssText = rule.cssText
+                urlsFoundInCss.push( ...getUrlsFromCssString(cssText) );
+                cssStyles += cssText + "\n ";
+                
+            } else if (window.matchMedia(rule.conditionText).matches) {
+                const urlList = findUrlsInCss(rule);
+                urlsFoundInCss.push( ...urlList.urls );
+                cssStyles += urlList.cssText;
+            }
+        }
+
+        return {cssText: cssStyles, urls: urlsFoundInCss};
+    }
+
+    /**
      * 
      * @returns {Promise<String>}
      */
-    const buildSvgDataUri = async function(contentHtml, width, height) {
+    this.renderToSvg = async function() {
 
         return new Promise(async function(resolve, reject) {
 
-            /* !! The problems !!
-            *  1. CORS (not really an issue, expect perhaps for images, as this is a general security consideration to begin with)
-            *  2. Platform won't wait for external assets to load (fonts, images, etc.)
-            */ 
-
-            // copy styles
+            let head = document.getElementsByTagName('head')[0];
+            head.insertBefore(base, head.childNodes[0]);
+            
             let cssStyles = "";
             let urlsFoundInCss = [];
 
             for (let i=0; i<styleSheets.length; i++) {
-                for(let j=0; j<styleSheets[i].cssRules.length; j++) {
-                    const cssRuleStr = styleSheets[i].cssRules[j].cssText;
-                    urlsFoundInCss.push( ...getUrlsFromCssString(cssRuleStr) );
-                    cssStyles += cssRuleStr;
-                }
+                const urlList = findUrlsInCss(styleSheets[i]);
+                urlsFoundInCss.push( ...urlList.urls );
+                cssStyles += urlList.cssText;
             }
 
             const fetchedResourcesFromStylesheets = await getMultipleResourcesAsBase64(urlsFoundInCss);
@@ -182,53 +211,49 @@ const ForeignHtmlRenderer = function(styleSheets) {
                 cssStyles = cssStyles.replace(new RegExp(escapeRegExp(r.resourceUrl),"g"), r.resourceBase64);
             }
 
-            let urlsFoundInHtml = getImageUrlsFromFromHtml(contentHtml);
+            let urlsFoundInHtml = getImageUrlsFromFromHtml(contentHtml);//.concat(getUrlsFromCssString(contentHtml));
             const fetchedResources = await getMultipleResourcesAsBase64(urlsFoundInHtml);
             for(let i=0; i<fetchedResources.length; i++) {
                 const r = fetchedResources[i];
                 contentHtml = contentHtml.replace(new RegExp(escapeRegExp(r.resourceUrl),"g"), r.resourceBase64);
             }
 
-            const styleElem = document.createElement("style");
-            styleElem.innerHTML = cssStyles;
+            base.remove();
 
-            const styleElemString = new XMLSerializer().serializeToString(styleElem);
-
-            // create DOM element string that encapsulates styles + content
-            const contentRootElem = document.createElement("div");
-            contentRootElem.innerHTML = styleElemString + contentHtml;
-            contentRootElem.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
-
-            const contentRootElemString = new XMLSerializer().serializeToString(contentRootElem);
-
-            // build SVG string
             const svg = `
                 <svg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}'>
                     <g transform='translate(0, 0) rotate(0)'>
                         <foreignObject x='0' y='0' width='${width}' height='${height}'>
-                            ${contentRootElemString}
+                            <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+                                <head>
+                                    <style>
+                                        ${cssStyles}
+                                    </style>
+                                </head>
+                                <body>
+                                    ${contentHtml}
+                                </body>
+                            </html>
                         </foreignObject>
                     </g>
-                </svg>`;
+                </svg>
+            `;
 
-            // convert SVG to data-uri
-            const dataUri = `data:image/svg+xml;base64,${window.btoa(svg)}`;
+            const unescapedSvg = unescape(encodeURIComponent(svg));
+            const dataUri = `data:image/svg+xml;base64,${window.btoa(unescapedSvg)}`;
 
             resolve(dataUri);                    
         });
     };
 
     /**
-     * @param {String} html
-     * @param {Number} width
-     * @param {Number} height
      * 
      * @return {Promise<Image>}
      */
-    this.renderToImage = async function(html, width, height) {
+    this.renderToImage = async function() {
         return new Promise(async function(resolve, reject) {
             const img = new Image();
-            img.src = await buildSvgDataUri(html, width, height);
+            img.src = await self.renderToSvg();
     
             img.onload = function() {
                 resolve(img);
@@ -237,15 +262,12 @@ const ForeignHtmlRenderer = function(styleSheets) {
     };
 
     /**
-     * @param {String} html
-     * @param {Number} width
-     * @param {Number} height
      * 
      * @return {Promise<Image>}
      */
-    this.renderToCanvas = async function(html, width, height) {
+    this.renderToCanvas = async function() {
         return new Promise(async function(resolve, reject) {
-            const img = await self.renderToImage(html, width, height);
+            const img = await self.renderToImage();
 
             const canvas = document.createElement('canvas');
             canvas.width = img.width;
@@ -259,15 +281,12 @@ const ForeignHtmlRenderer = function(styleSheets) {
     };    
 
     /**
-     * @param {String} html
-     * @param {Number} width
-     * @param {Number} height
      * 
      * @return {Promise<String>}
      */
-    this.renderToBase64Png = async function(html, width, height) {
+    this.renderToBase64Png = async function() {
         return new Promise(async function(resolve, reject) {
-            const canvas = await self.renderToCanvas(html, width, height);
+            const canvas = await self.renderToCanvas();
             resolve(canvas.toDataURL('image/png'));
         });
     };
