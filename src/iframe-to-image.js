@@ -220,19 +220,27 @@ const iframetoimage = function(iframe) {
 
             base.remove();
 
+            const styleElem = document.createElement("style");
+            styleElem.innerHTML = cssStyles;
+
+            const styleElemString = new XMLSerializer().serializeToString(styleElem);
+
+            // create DOM element string that encapsulates style,s + content
+            const contentRootElem = document.createElement("body");
+            contentRootElem.innerHTML = contentHtml // styleElemString + contentHtml;
+            contentRootElem.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
+
+            const contentRootElemString = new XMLSerializer().serializeToString(contentRootElem);
+
             const svg = `
                 <svg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}'>
                     <g transform='translate(0, 0) rotate(0)'>
                         <foreignObject x='0' y='0' width='${width}' height='${height}'>
                             <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
                                 <head>
-                                    <style>
-                                        ${cssStyles}
-                                    </style>
+                                    ${styleElemString}
                                 </head>
-                                <body>
-                                    ${contentHtml}
-                                </body>
+                                ${contentRootElemString}
                             </html>
                         </foreignObject>
                     </g>

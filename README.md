@@ -7,8 +7,7 @@ Experimenting with using the SVG [\<foreignObject>](https://developer.mozilla.or
 ## usage
 
     const renderer = new iframetoimage(iframe);
-    renderer.renderToSvg().then(function(svg) {
-        document.getElementById(`image`).src = svg;
-        iframe.remove();
+    renderer.renderToSvg().then((svg) => {
+        image.src = svg;
     });
-    
+
