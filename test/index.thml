@@ -12,8 +12,8 @@
             iframe.src = "test-file.html";
             iframe.onload = function() {
                 const renderer = new iframetoimage(iframe);
-                renderer.renderToSvg().then(function(ret) {
-                    document.getElementById(`image`).src = ret;
+                renderer.renderToSvg().then(function(svg) {
+                    document.getElementById(`image`).src = svg;
                     iframe.remove();
                 });
             }
