@@ -15,7 +15,7 @@ Experimenting with using the SVG [\<foreignObject>](https://developer.mozilla.or
         <body>
             <img id="image">
             <script type="text/javascript">
-                const iframe = document.createElement('iframe');
+                const iframe = document.createElement(`iframe`);
                 iframe.style.visibility = "hidden";
                 iframe.src = "test-file.html";
                 iframe.onload = function() {
