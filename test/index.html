@@ -14,8 +14,7 @@
             iframe.style.visibility = "hidden";
             iframe.src = "test-file.html";
             iframe.onload = function() {
-                const renderer = new iframetoimage(iframe);
-                renderer.renderToBase64Png()
+                iframetoimage(iframe).renderToBase64Png()
                     .then((base64png) => {
                         document.getElementById(`image`).src = base64png;
                         iframe.remove();
