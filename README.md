@@ -6,26 +6,9 @@ Experimenting with using the SVG [\<foreignObject>](https://developer.mozilla.or
 
 ## usage
 
-    <!DOCTYPE html>
-    <html>
-        <meta charset="utf-8">
-        <head>
-            <script src="src/iframe-to-image.js" type="text/javascript"></script>
-        </head>
-        <body>
-            <img id="image">
-            <script type="text/javascript">
-                const iframe = document.createElement(`iframe`);
-                iframe.style.visibility = "hidden";
-                iframe.src = "test-file.html";
-                iframe.onload = function() {
-                    const renderer = new iframetoimage(iframe);
-                    renderer.renderToSvg().then(function(ret) {
-                        document.getElementById(`image`).src = ret;
-                        iframe.remove();
-                    });
-                }
-                document.body.appendChild(iframe);
-            </script>
-        </body>
-    </html>
+    const renderer = new iframetoimage(iframe);
+    renderer.renderToSvg().then(function(svg) {
+        document.getElementById(`image`).src = svg;
+        iframe.remove();
+    });
+    
