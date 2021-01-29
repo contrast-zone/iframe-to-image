@@ -1,22 +1,21 @@
 /**
  * 
- * @param {Object} iframe 
  * @returns {ForeignHtmlRenderer} 
  */
-const iframetoimage = function(iframe) {
-        
-    const base = document.createElement('base');
-    base.href = iframe.src;
-                            
-    const contentDocument = iframe.contentDocument;
-    let styleSheets = contentDocument.styleSheets;
-    let contentHtml = contentDocument.body.innerHTML;
+const renderHtml = function() {
+    'use strict'
     
-    const body = contentDocument.body;
-    const width = body.scrollLeft + body.scrollWidth;
-    const height = body.scrollTop + body.scrollHeight;    
-
-    const ForeignHtmlRenderer = function() {
+    /**
+     * 
+     * @param {String} contentHtml 
+     * @param {StyleSheetList} styleSheets 
+     * @param {BaseUrlObject} base 
+     * @param {Number} width
+     * @param {Number} height
+     * 
+     * @returns {Promise<String>}
+     */
+    const ForeignHtmlRenderer = function(contentHtml, styleSheets, base, width, height) {
             
         const self = this;
 
@@ -191,7 +190,7 @@ const iframetoimage = function(iframe) {
          * 
          * @returns {Promise<String>}
          */
-        this.renderToSvg = async function() {
+        this.toSvg = async function() {
 
             return new Promise(async function(resolve, reject) {
 
@@ -230,7 +229,7 @@ const iframetoimage = function(iframe) {
 
                 // create DOM element string that encapsulates body
                 const contentRootElem = document.createElement("body");
-                contentRootElem.innerHTML = contentHtml // styleElemString + contentHtml;
+                contentRootElem.innerHTML = contentHtml;
                 //contentRootElem.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
 
                 const contentRootElemString = new XMLSerializer().serializeToString(contentRootElem);
@@ -261,10 +260,10 @@ const iframetoimage = function(iframe) {
          * 
          * @return {Promise<Image>}
          */
-        this.renderToImage = async function() {
+        this.toImage = async function() {
             return new Promise(async function(resolve, reject) {
                 const img = new Image();
-                img.src = await self.renderToSvg();
+                img.src = await self.toSvg();
         
                 img.onload = function() {
                     resolve(img);
@@ -276,9 +275,9 @@ const iframetoimage = function(iframe) {
          * 
          * @return {Promise<Image>}
          */
-        this.renderToCanvas = async function() {
+        this.toCanvas = async function() {
             return new Promise(async function(resolve, reject) {
-                const img = await self.renderToImage();
+                const img = await self.toImage();
 
                 const canvas = document.createElement('canvas');
                 canvas.width = img.width;
@@ -295,15 +294,106 @@ const iframetoimage = function(iframe) {
          * 
          * @return {Promise<String>}
          */
-        this.renderToBase64Png = async function() {
+        this.toBase64Png = async function() {
             return new Promise(async function(resolve, reject) {
-                const canvas = await self.renderToCanvas();
+                const canvas = await self.toCanvas();
                 resolve(canvas.toDataURL('image/png'));
             });
         };
 
     };
-    
-    return new ForeignHtmlRenderer();
+
+    let construct = {
+        fromIframe: function(iframe, remove) {
+            let base = document.createElement('base');
+            base.href = iframe.src;
+            
+            let contentDocument = iframe.contentDocument;
+            let styleSheets = contentDocument.styleSheets;
+            let contentHtml = contentDocument.body.innerHTML;
+            
+            let body = contentDocument.body;
+            let width = body.scrollLeft + body.scrollWidth;
+            let height = body.scrollTop + body.scrollHeight;
+            
+            if (remove)
+                iframe.remove();
+            
+            return new ForeignHtmlRenderer(contentHtml, styleSheets, base, width, height);
+        },
+        
+        fromString: function(strHtml) {
+            return new Promise(async function(resolve, reject) {
+                const iframe = document.createElement(`iframe`);
+                iframe.style.visibility = "hidden";
+                document.body.appendChild(iframe);
+                
+                iframe.onload = function () {
+                    resolve(construct["fromIframe"](iframe, true));
+                }
+                
+                iframe.srcdoc = strHtml;
+            });
+        },
+        
+        fromFile: async function(url) {
+            return new Promise(async function(resolve, reject) {
+                const xhr = new XMLHttpRequest();
+                xhr.open("GET", url);
+
+                xhr.onreadystatechange = async function() {
+                    if(xhr.readyState === 4 && xhr.status === 200) {
+                        resolve(construct["fromString"](xhr.response, true))
+                    }
+                };
+
+                xhr.send(null);
+            });
+        }
+    };
+
+    function convert (constructor, param) {
+        this.toSvg = async function() {
+            return new Promise(async function(resolve, reject) {
+                let fhr = await construct[constructor](param);
+                resolve(fhr.toSvg());
+            });
+        };
+        
+        this.toImage = async function() {
+            return new Promise(async function(resolve, reject) {
+                let fhr = await construct[constructor](param);
+                resolve(fhr.toImage());
+            });
+        };
+        
+        this.toCanvas = async function() {
+            return new Promise(async function(resolve, reject) {
+                let fhr = await construct[constructor](param);
+                resolve(fhr.toCanvas());
+            });
+        };
+        
+        this.toBase64Png = async function() {
+            return new Promise(async function(resolve, reject) {
+                let fhr = await construct[constructor](param);
+                resolve(fhr.toBase64Png());
+            });
+        }
+    }
+
+
+    return {
+        fromIframe: function(iframe) {
+            return new convert("fromIframe", iframe);
+        },
+        fromString: function(strHtml) {
+            return new convert("fromString", strHtml);
+        },
+        fromFile: function(fileName) {
+            return new convert("fromFile", fileName);
+        },
+        ForeignHtmlRenderer: ForeignHtmlRenderer
+    };
 };
 
