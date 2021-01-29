@@ -13,18 +13,19 @@ Experimenting with using the SVG [\<foreignObject>](https://developer.mozilla.or
             <script src="src/iframe-to-image.js" type="text/javascript"></script>
         </head>
         <body>
+            <img id="image">
             <script type="text/javascript">
-                const iframe = document.createElement ('iframe');
+                const iframe = document.createElement('iframe');
                 iframe.style.visibility = "hidden";
                 iframe.src = "test-file.html";
-                iframe.onload = function () {
-                    const renderer = new iframetoimage (iframe);
-                    renderer.renderToSvg ().then(function(ret) {
-                        imgage.src = ret;
+                iframe.onload = function() {
+                    const renderer = new iframetoimage(iframe);
+                    renderer.renderToSvg().then(function(ret) {
+                        document.getElementById(`image`).src = ret;
                         iframe.remove();
                     });
                 }
-                document.body.appendChild (iframe);
+                document.body.appendChild(iframe);
             </script>
         </body>
     </html>
