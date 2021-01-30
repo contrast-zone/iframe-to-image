@@ -303,7 +303,7 @@ const renderHtml = function() {
 
     };
 
-    let construct = {
+    let setSource = {
         fromIframe: function(iframe, removeIframe, baseUrl) {
             let base = document.createElement('base');
             if (baseUrl)
@@ -332,7 +332,7 @@ const renderHtml = function() {
                 document.body.appendChild(iframe);
                 
                 iframe.onload = function () {
-                    resolve(construct["fromIframe"](iframe, true, baseUrl));
+                    resolve(setSource["fromIframe"](iframe, true, baseUrl));
                 }
                 
                 iframe.srcdoc = strHtml;
@@ -346,7 +346,7 @@ const renderHtml = function() {
 
                 xhr.onreadystatechange = async function() {
                     if(xhr.readyState === 4 && xhr.status === 200) {
-                        resolve(construct["fromString"](xhr.response, url))
+                        resolve(setSource["fromString"](xhr.response, url))
                     }
                 };
 
@@ -355,48 +355,48 @@ const renderHtml = function() {
         }
     };
 
-    function convert (constructor, param) {
+    function getRenderer (constructor, param) {
         this.toBase64Svg = async function() {
             return new Promise(async function(resolve, reject) {
-                let fhr = await construct[constructor](param);
-                resolve(fhr.toSvg());
+                let foreignHtmlRenderer = await setSource[constructor](param);
+                resolve(foreignHtmlRenderer.toSvg());
             });
         };
         
         this.toImage = async function() {
             return new Promise(async function(resolve, reject) {
-                let fhr = await construct[constructor](param);
-                resolve(fhr.toImage());
+                let foreignHtmlRenderer = await setSource[constructor](param);
+                resolve(foreignHtmlRenderer.toImage());
             });
         };
         
         this.toCanvas = async function() {
             return new Promise(async function(resolve, reject) {
-                let fhr = await construct[constructor](param);
-                resolve(fhr.toCanvas());
+                let foreignHtmlRenderer = await setSource[constructor](param);
+                resolve(foreignHtmlRenderer.toCanvas());
             });
         };
         
         this.toBase64Png = async function() {
             return new Promise(async function(resolve, reject) {
-                let fhr = await construct[constructor](param);
-                resolve(fhr.toBase64Png());
+                let foreignHtmlRenderer = await setSource[constructor](param);
+                resolve(foreignHtmlRenderer.toBase64Png());
             });
         }
     }
 
 
     return {
+        foreignHtmlRenderer: ForeignHtmlRenderer,
         fromIframe: function(iframe) {
-            return new convert("fromIframe", iframe);
+            return new getRenderer("fromIframe", iframe);
         },
         fromString: function(strHtml) {
-            return new convert("fromString", strHtml);
+            return new getRenderer("fromString", strHtml);
         },
         fromFile: function(fileName) {
-            return new convert("fromFile", fileName);
-        },
-        ForeignHtmlRenderer: ForeignHtmlRenderer
+            return new getRenderer("fromFile", fileName);
+        }
     };
 };
 
