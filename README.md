@@ -39,7 +39,7 @@ Under folder `/test/` we may find a live use example. We may play with `index.ht
 
 ## Test cases
 
-The library is tested on the latest the following platforms:
+The library has been tested, and works on the following platforms:
 
 - Linux
     - Firefox
