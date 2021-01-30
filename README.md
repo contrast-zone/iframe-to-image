@@ -39,4 +39,11 @@ Under folder `/test/` we may find a live use example. We may play with `index.ht
 
 ## Test cases
 
-The library is tested on the latest Firefox and Chrommium on Linux.
+The library is tested on the latest the following platforms:
+
+- Linux
+    - Firefox
+    - Chrommium
+- Android
+    - Chrome
+    - Samsung Internet Browser
