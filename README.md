@@ -1,6 +1,6 @@
 # render-html.js
 
-This is a fork of [svg-foreignobject-screenshot](https://github.com/aautar/svg-foreignobject-screenshot), wrapping it within calling interface to render images from iframes, strings and files. Svg-foreignobject-screenshot project is characterized as: *Experimenting with using the SVG [\<foreignObject>](https://developer.mozilla.org/en-US/docs/Web/SVG/Element/foreignObject) element to render and generate images of HTML content.* It features minimal and clean implementation coupled with some very smart design choices.
+This is a fork of [svg-foreignobject-screenshot](https://github.com/aautar/svg-foreignobject-screenshot), wrapping it within calling interface to render images from HTML iframes, strings and files. Svg-foreignobject-screenshot project is described as: *Experimenting with using the SVG [\<foreignObject>](https://developer.mozilla.org/en-US/docs/Web/SVG/Element/foreignObject) element to render and generate images of HTML content.* It features minimal and clean implementation coupled with some very smart design choices.
 
 ## use instructions
 
