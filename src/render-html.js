@@ -304,9 +304,12 @@ const renderHtml = function() {
     };
 
     let construct = {
-        fromIframe: function(iframe, remove) {
+        fromIframe: function(iframe, removeIframe, baseUrl) {
             let base = document.createElement('base');
-            base.href = iframe.src;
+            if (baseUrl)
+                base.href = baseUrl;
+            else
+                base.href = iframe.src;
             
             let contentDocument = iframe.contentDocument;
             let styleSheets = contentDocument.styleSheets;
@@ -316,20 +319,20 @@ const renderHtml = function() {
             let width = body.scrollLeft + body.scrollWidth;
             let height = body.scrollTop + body.scrollHeight;
             
-            if (remove)
+            if (removeIframe)
                 iframe.remove();
             
             return new ForeignHtmlRenderer(contentHtml, styleSheets, base, width, height);
         },
         
-        fromString: function(strHtml) {
+        fromString: function(strHtml, baseUrl) {
             return new Promise(async function(resolve, reject) {
                 const iframe = document.createElement(`iframe`);
                 iframe.style.visibility = "hidden";
                 document.body.appendChild(iframe);
                 
                 iframe.onload = function () {
-                    resolve(construct["fromIframe"](iframe, true));
+                    resolve(construct["fromIframe"](iframe, true, baseUrl));
                 }
                 
                 iframe.srcdoc = strHtml;
@@ -343,7 +346,7 @@ const renderHtml = function() {
 
                 xhr.onreadystatechange = async function() {
                     if(xhr.readyState === 4 && xhr.status === 200) {
-                        resolve(construct["fromString"](xhr.response, true))
+                        resolve(construct["fromString"](xhr.response, url))
                     }
                 };
 
