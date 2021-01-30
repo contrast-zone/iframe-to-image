@@ -35,7 +35,7 @@ In a specific example, if we want to render HTML file `test-file.html` to base64
             document.getElementById('image').src = base64png;
         });
 
-Under folder `/test/` we may find some live use example. We may play with `/test/index.html` in an editor and test it in a browser to see the result (we'll need a HTTP server to do this).
+Under folder `/test/` we may find some live use example. We may play with `/test/index.html` in an editor and test it in a browser to see the result (we may need a HTTP server to do this).
 
 ## Test cases
 
