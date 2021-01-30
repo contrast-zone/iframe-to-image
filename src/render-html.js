@@ -304,12 +304,11 @@ const renderHtml = function() {
     };
 
     let setSource = {
-        fromIframe: function(iframe, removeIframe, baseUrl) {
-            let base = document.createElement('base');
-            if (baseUrl)
-                base.href = baseUrl;
-            else
+        fromIframe: function(iframe, removeIframe, base) {
+            if (!base) {
+                base = document.createElement('base');
                 base.href = iframe.src;
+            }
             
             let contentDocument = iframe.contentDocument;
             let styleSheets = contentDocument.styleSheets;
@@ -327,12 +326,21 @@ const renderHtml = function() {
         
         fromString: function(strHtml, baseUrl) {
             return new Promise(async function(resolve, reject) {
+                var base = undefined;
+                if (baseUrl) {
+                    base = document.createElement('base');
+                    base.href = baseUrl;
+                    let head = document.getElementsByTagName('head')[0];
+                    head.insertBefore(base, head.childNodes[0]);
+                }
+
                 const iframe = document.createElement(`iframe`);
                 iframe.style.visibility = "hidden";
                 document.body.appendChild(iframe);
                 
                 iframe.onload = function () {
-                    resolve(setSource["fromIframe"](iframe, true, baseUrl));
+                    base.remove();
+                    resolve(setSource["fromIframe"](iframe, true, base));
                 }
                 
                 iframe.srcdoc = strHtml;
