@@ -35,7 +35,7 @@ In a specific example, if we want to convert HTML file `test-file.html` to base6
             document.getElementById('image').src = base64png;
         });
 
-Under folder `/test/` we may find a live usage example. We may play with `index.html` in an editor and test it in a browser to see the result.
+Under folder `/test/` we may find a live use example. We may play with `index.html` in an editor and test it in a browser to see the result.
 
 ## Test cases
 
