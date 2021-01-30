@@ -1,6 +1,6 @@
 # render-html.js
 
-This is a fork of [svg-foreignobject-screenshot](https://github.com/aautar/svg-foreignobject-screenshot) (SFS), wrapping it within calling interface to render images from HTML iframes, strings and files. SFS project is described as: *"Experimenting with using the SVG [\<foreignObject>](https://developer.mozilla.org/en-US/docs/Web/SVG/Element/foreignObject) element to render and generate images of HTML content."* SFS features minimal and clean implementation coupled with some neat design choices. It operates using only client browser scripting.
+This is a fork of [svg-foreignobject-screenshot](https://github.com/aautar/svg-foreignobject-screenshot) (SFS), wrapping it within calling interface to render images from HTML iframes, strings and files. SFS project is described as: *"Experimenting with using the SVG [\<foreignObject>](https://developer.mozilla.org/en-US/docs/Web/SVG/Element/foreignObject) element to render and generate images of HTML content."* SFS features lightweight and clean implementation coupled with some neat design choices. It operates using only client browser scripting.
 
 ## use instructions
 
@@ -35,7 +35,7 @@ In a specific example, if we want to render HTML file `test-file.html` to base64
             document.getElementById('image').src = base64png;
         });
 
-Under folder `/test/` we may find some live use example. We may play with `/test/index.html` in an editor and test it in a browser to see the result (we may need a HTTP server to do this).
+Under folder `/test/` we may find some live use example. We may play with `/test/index.html` in an editor and test it in a browser to see the result (we may need a HTTP server to do this because of employing AJAX calls).
 
 ## Test cases
 
@@ -44,6 +44,7 @@ The library has been tested, and works on the following platforms:
 - Linux
     - Chrommium
     - Firefox
+    - Opera
 - Android
     - Chrome
     - Samsung Internet Browser
