@@ -353,7 +353,7 @@ const renderHtml = function() {
     };
 
     function convert (constructor, param) {
-        this.toSvg = async function() {
+        this.toBase64Svg = async function() {
             return new Promise(async function(resolve, reject) {
                 let fhr = await construct[constructor](param);
                 resolve(fhr.toSvg());
