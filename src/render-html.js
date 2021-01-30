@@ -339,7 +339,9 @@ const renderHtml = function() {
                 document.body.appendChild(iframe);
                 
                 iframe.onload = function () {
-                    base.remove();
+                    if (baseUrl)
+                        base.remove();
+                    
                     resolve(setSource["fromIframe"](iframe, true, base));
                 }
                 
