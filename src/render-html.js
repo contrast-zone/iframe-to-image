@@ -15,7 +15,7 @@ const renderHtml = function() {
      * 
      * @returns {Promise<String>}
      */
-    const ForeignHtmlRenderer = function(contentHtml, styleSheets, base, width, height) {
+    const ForeignHtmlRenderer = function(contentBody, styleSheets, base, width, height) {
             
         const self = this;
 
@@ -125,27 +125,6 @@ const renderHtml = function() {
             return urlsFound;
         };    
 
-        /**
-         * 
-         * @param {String} html 
-         * @returns {String[]}
-         */
-        const getImageUrlsFromFromHtml = function(html) {
-            const urlsFound = [];
-            let searchStartIndex = 0;
-
-            while(true) {
-                const url = parseValue(html, searchStartIndex, 'src=', [' ', '>', '\t']);
-                if(url === null) {
-                    break;
-                }
-
-                searchStartIndex = url.foundAtIndex + url.value.length;
-                urlsFound.push(removeQuotes(url.value));
-            }
-
-            return urlsFound;
-        };
 
         /**
          * 
@@ -165,25 +144,54 @@ const renderHtml = function() {
          * @param {StyleSheet} styleSheet
          * @returns {String|urlList}
          */
-        const findUrlsInCss = function(styleSheet) {
-            let cssStyles = "";
-            let urlsFoundInCss = [];
+        const outlineStylesheet = async function(styleSheet) {
+            return new Promise(async function(resolve, reject) {
+                let cssStyles = "";
+                for(let i=0; i<styleSheet.cssRules.length; i++) {
+                    const rule = styleSheet.cssRules[i];
+                    if (!rule.conditionText) {
+                        const cssText = rule.cssText
+                        cssStyles += cssText + "\n ";
+                        const fetchedResourcesFromStylesheets = await getMultipleResourcesAsBase64(getUrlsFromCssString(cssText));
+                        for(let i=0; i<fetchedResourcesFromStylesheets.length; i++) {
+                            const r = fetchedResourcesFromStylesheets[i];
+                            cssStyles = cssStyles.replace(new RegExp("url\\(\\s*[\"]?" + escapeRegExp(r.resourceUrl) + "[\"]?\\s*\\)","g"), "url('" + r.resourceBase64 + "')") + "\n ";
+                        }
+                        
+                    } else if (window.matchMedia(rule.conditionText).matches) {
+                        cssStyles += await outlineStylesheet(rule);
+                    }
+                    cssStyles=cssStyles;
+                }
 
-            for(let i=0; i<styleSheet.cssRules.length; i++) {
-                const rule = styleSheet.cssRules[i];
-                if (!rule.conditionText) {
-                    const cssText = rule.cssText
-                    urlsFoundInCss.push( ...getUrlsFromCssString(cssText) );
-                    cssStyles += cssText + "\n ";
-                    
-                } else if (window.matchMedia(rule.conditionText).matches) {
-                    const urlList = findUrlsInCss(rule);
-                    urlsFoundInCss.push( ...urlList.urls );
-                    cssStyles += urlList.cssText;
+                resolve(cssStyles);
+            });
+        }
+
+        /**
+         * 
+         * @param {HTMLElement} node
+         */
+        const inlineAttributes = async function(node) {
+            var attrs = node.attributes;
+            if (attrs) {
+                var output = "";
+                for(let i = attrs.length - 1; i >= 0; i--) {
+                    if (attrs[i].name === "src") {
+                        const fetchedResources = await getMultipleResourcesAsBase64([attrs[i].value]);
+                        attrs[i].value = fetchedResources[0].resourceBase64;
+                        
+                    } else if (attrs[i].name === "style") {
+                        let urlsFoundInStyle = getUrlsFromCssString(attrs[i].value);
+                        const fetchedResources = await getMultipleResourcesAsBase64(urlsFoundInStyle);
+                        for(let j=0; j<fetchedResources.length; j++) {
+                            const r = fetchedResources[j];
+                            let attr = attrs[i].value.replace(new RegExp("url\\(\\s*[\"]?" + escapeRegExp(r.resourceUrl) + "[\"]?\\s*\\)","g"), "url('" + r.resourceBase64 + "')");
+                            attrs[i].value = attr;
+                        }
+                    }
                 }
             }
-
-            return {cssText: cssStyles, urls: urlsFoundInCss};
         }
 
         /**
@@ -197,42 +205,28 @@ const renderHtml = function() {
                 let head = document.getElementsByTagName('head')[0];
                 head.insertBefore(base, head.childNodes[0]);
                 
-                let cssStyles = "";
-                let urlsFoundInCss = [];
-
-                for (let i=0; i<styleSheets.length; i++) {
-                    const urlList = findUrlsInCss(styleSheets[i]);
-                    urlsFoundInCss.push( ...urlList.urls );
-                    cssStyles += urlList.cssText;
-                }
-
-                const fetchedResourcesFromStylesheets = await getMultipleResourcesAsBase64(urlsFoundInCss);
-                for(let i=0; i<fetchedResourcesFromStylesheets.length; i++) {
-                    const r = fetchedResourcesFromStylesheets[i];
-                    cssStyles = cssStyles.replace(new RegExp(escapeRegExp(r.resourceUrl),"g"), r.resourceBase64);
-                }
-
-                let urlsFoundInHtml = getImageUrlsFromFromHtml(contentHtml).concat(getUrlsFromCssString(contentHtml));
-                const fetchedResources = await getMultipleResourcesAsBase64(urlsFoundInHtml);
-                for(let i=0; i<fetchedResources.length; i++) {
-                    const r = fetchedResources[i];
-                    contentHtml = contentHtml.replace(new RegExp(escapeRegExp(r.resourceUrl),"g"), r.resourceBase64);
-                }
-
-                base.remove();
+                // generate inlined css
+                var cssStyles = "";
+                for (let i=0; i<styleSheets.length; i++)
+                    cssStyles += await outlineStylesheet(styleSheets[i]);
 
                 // create DOM element string that encapsulates style
                 const styleElem = document.createElement("style");
                 styleElem.innerHTML = cssStyles;
-
                 const styleElemString = new XMLSerializer().serializeToString(styleElem);
 
-                // create DOM element string that encapsulates body
-                const contentRootElem = document.createElement("body");
-                contentRootElem.innerHTML = contentHtml;
-                //contentRootElem.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
 
-                const contentRootElemString = new XMLSerializer().serializeToString(contentRootElem);
+                let bodyElem = contentBody.cloneNode(true);
+
+                // inline element attributes
+                inlineAttributes(contentBody);
+                let elements = bodyElem.getElementsByTagName("*");
+                for(let i=0; i < elements.length; i++)
+                    await inlineAttributes(elements[i]);
+
+                const contentRootElemString = new XMLSerializer().serializeToString(bodyElem);
+
+                base.remove();
 
                 const svg = `
                     <svg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}'>
@@ -314,14 +308,14 @@ const renderHtml = function() {
             let styleSheets = contentDocument.styleSheets;
             let contentHtml = contentDocument.body.innerHTML;
             
-            let body = contentDocument.body;
-            let width = body.scrollLeft + body.scrollWidth;
-            let height = body.scrollTop + body.scrollHeight;
+            let contentBody = contentDocument.body;
+            let width = contentBody.scrollLeft + contentBody.scrollWidth;
+            let height = contentBody.scrollTop + contentBody.scrollHeight;
             
             if (removeIframe)
                 iframe.remove();
             
-            return new ForeignHtmlRenderer(contentHtml, styleSheets, base, width, height);
+            return new ForeignHtmlRenderer(contentBody, styleSheets, base, width, height);
         },
         
         fromString: function(strHtml, baseUrl) {
@@ -339,9 +333,7 @@ const renderHtml = function() {
                 document.body.appendChild(iframe);
                 
                 iframe.onload = function () {
-                    if (baseUrl)
-                        base.remove();
-                    
+                    if (baseUrl) base.remove();
                     resolve(setSource["fromIframe"](iframe, true, base));
                 }
                 
@@ -349,14 +341,14 @@ const renderHtml = function() {
             });
         },
         
-        fromFile: async function(url) {
+        fromFile: async function(urlHtml) {
             return new Promise(async function(resolve, reject) {
                 const xhr = new XMLHttpRequest();
-                xhr.open("GET", url);
+                xhr.open("GET", urlHtml);
 
                 xhr.onreadystatechange = async function() {
                     if(xhr.readyState === 4 && xhr.status === 200) {
-                        resolve(setSource["fromString"](xhr.response, url))
+                        resolve(setSource["fromString"](xhr.response, urlHtml))
                     }
                 };
 
