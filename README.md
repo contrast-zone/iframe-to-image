@@ -39,4 +39,4 @@ Under folder `/test/` we may find some live use example. We may play with `/test
 
 ## Test cases
 
-The library still needs to be tested.
+The library still needs to be tested. At the time of writing, Safari had some allegedly *"to-work-around-render-it-twice"* struggles with it.
