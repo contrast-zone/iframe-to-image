@@ -42,10 +42,9 @@ const renderHtml = function() {
             return new Promise(function(resolve, reject) {
                 var tempbase;
                 if (!base) {
-                    const ibase = iframe.contentDocument.getElementsByTagName('base')[0];
-                    if (ibase) {
-                        const tempbase = document.createElement('base');
-                        tempbase.href = ibase.href;
+                    if (iframe.src) {
+                        tempbase = document.createElement('base');
+                        tempbase.href = iframe.src;//ibase.href;
                     
                         var head = document.getElementsByTagName('head')[0];
                         head.insertBefore(tempbase, head.childNodes[0]);
@@ -248,7 +247,6 @@ const renderHtml = function() {
         this.toSvg = async function() {
             return new Promise(async function(resolve, reject) {
                 
-                
                 /*
                 // inline style sheets
                 let doc = iframe.contentDocument.cloneNode(true);
@@ -280,7 +278,7 @@ const renderHtml = function() {
                 const styleElemString = new XMLSerializer().serializeToString(styleElem);
                 
                 // inline body attributes
-                let bodyElem = iframe.contentDocument.body.cloneNode(true);
+                let bodyElem = iframe.contentDocument.body;
                 
                 inlineAttributes(bodyElem);
                 let elements = bodyElem.getElementsByTagName("*");
