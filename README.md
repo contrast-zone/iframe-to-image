@@ -1,6 +1,6 @@
 # render-html.js
 
-This is a fork of [svg-foreignobject-screenshot](https://github.com/aautar/svg-foreignobject-screenshot) (SFS), wrapping it within calling interface to render images from HTML iframes, strings and files. SFS project is described as: *"Experimenting with using the SVG [\<foreignObject>](https://developer.mozilla.org/en-US/docs/Web/SVG/Element/foreignObject) element to render and generate images of HTML content."* SFS features lightweight and clean implementation with some neat design choices. It operates using only client browser scripting. We put some wage on SFS considering URL system and HTML body traversal function.
+This is a fork of [svg-foreignobject-screenshot](https://github.com/aautar/svg-foreignobject-screenshot) (SFS), wrapping it within calling interface to render images from HTML iframes, strings and files. SFS project is described as: *"Experimenting with using the SVG [\<foreignObject>](https://developer.mozilla.org/en-US/docs/Web/SVG/Element/foreignObject) element to render and generate images of HTML content."* SFS features lightweight and clean implementation with some neat design choices. Its benefit is HTML rendering exactly as browser would do, while it operates using only client browser scripting. We put some wage on SFS we find necessary, considering URL system and HTML body traversal function. Nevertheless, SFS original implementation elegance remains a valuable material, and we invite interested readers to visit the above link for more information.
 
 ## use instructions
 
