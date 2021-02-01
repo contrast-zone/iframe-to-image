@@ -196,6 +196,7 @@ const renderHtml = function() {
          * 
          * @param {CSSStyleSheet} node
          *
+         * note - Firefox complains
         const inlineStyleSheet = async function(node) {
             for(let i=0; i<node.cssRules.length; i++) {
                 const rule = node.cssRules[i];
@@ -248,7 +249,7 @@ const renderHtml = function() {
             return new Promise(async function(resolve, reject) {
                 
                 /*
-                // inline style sheets
+                // inline style sheets - Firefox complains
                 let doc = iframe.contentDocument.cloneNode(true);
                 let contentHead = doc.getElementsByTagName('head')[0];
                 let styleElem = doc.createElement("style");
