@@ -356,7 +356,7 @@ const renderHtml = function() {
 
                 xhr.onreadystatechange = async function() {
                     if(xhr.readyState === 4 && xhr.status === 200) {
-                        resolve(setSource["fromString"](xhr.response, url))
+                        resolve(await setSource["fromString"](xhr.response, url))
                     }
                 };
 
