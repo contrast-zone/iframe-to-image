@@ -15,7 +15,7 @@ const renderHtml = function() {
      * 
      * @returns {Promise<String>}
      */
-    const ForeignHtmlRenderer = function(contentHtml, styleSheets, base, width, height) {
+    const ForeignHtmlRenderer = function(iframe, base, width, height, removeIframe) {
             
         const self = this;
 
@@ -40,6 +40,18 @@ const renderHtml = function() {
          */
         const getResourceAsBase64 = function(url) {
             return new Promise(function(resolve, reject) {
+                var tempbase;
+                if (!base) {
+                    const ibase = iframe.contentDocument.getElementsByTagName('base')[0];
+                    if (ibase) {
+                        const tempbase = document.createElement('base');
+                        tempbase.href = ibase.href;
+                    
+                        var head = document.getElementsByTagName('head')[0];
+                        head.insertBefore(tempbase, head.childNodes[0]);
+                    }
+                }
+
                 const xhr = new XMLHttpRequest();
                 xhr.open("GET", url);
                 xhr.responseType = 'blob';
@@ -47,6 +59,10 @@ const renderHtml = function() {
                 xhr.onreadystatechange = async function() {
                     if(xhr.readyState === 4 && xhr.status === 200) {
                         const resBase64 = await binaryStringToBase64(xhr.response);
+
+                        if (tempbase)
+                            tempbase.remove();
+                            
                         resolve(
                             {
                                 "resourceUrl": url,
@@ -83,14 +99,14 @@ const renderHtml = function() {
          * @returns {String|null} 
          */
         const parseValue = function(str, startIndex, prefixToken, suffixTokens) {
-            const idx = str.indexOf(prefixToken, startIndex);
+            const idx = str.toLowerCase().indexOf(prefixToken, startIndex);
             if(idx === -1) {
                 return null;
             }
 
             let val = '';
             for(let i=idx+prefixToken.length; i<str.length; i++) {
-                if(suffixTokens.indexOf(str[i]) !== -1) {
+                if(suffixTokens.indexOf(str[i].toLowerCase()) !== -1) {
                     break;
                 }
 
@@ -125,27 +141,6 @@ const renderHtml = function() {
             return urlsFound;
         };    
 
-        /**
-         * 
-         * @param {String} html 
-         * @returns {String[]}
-         */
-        const getImageUrlsFromFromHtml = function(html) {
-            const urlsFound = [];
-            let searchStartIndex = 0;
-
-            while(true) {
-                const url = parseValue(html, searchStartIndex, 'src=', [' ', '>', '\t']);
-                if(url === null) {
-                    break;
-                }
-
-                searchStartIndex = url.foundAtIndex + url.value.length;
-                urlsFound.push(removeQuotes(url.value));
-            }
-
-            return urlsFound;
-        };
 
         /**
          * 
@@ -162,78 +157,138 @@ const renderHtml = function() {
 
         /**
          * 
+         * @param {String} cssText
+         * @returns {Promise<String>}
+         */
+        const inlineCssText = async function(cssText) {
+            return new Promise(async function(resolve, reject) {
+                let urlsFoundInStyle = getUrlsFromCssString(cssText);
+                const fetchedResources = await getMultipleResourcesAsBase64(urlsFoundInStyle);
+                for(let j=0; j<fetchedResources.length; j++) {
+                    const r = fetchedResources[j];
+                    cssText = cssText.replace(new RegExp(escapeRegExp(r.resourceUrl),"g"), r.resourceBase64);
+                }
+                
+                resolve(cssText);
+            });
+        }
+
+        /**
+         * 
+         * @param {HTMLElement} node
+         */
+        const inlineAttributes = async function(node) {
+            var attrs = node.attributes;
+            if (attrs) {
+                var output = "";
+                for(let i = attrs.length - 1; i >= 0; i--) {
+                    if (attrs[i].name === "src") {
+                        const fetchedResources = await getMultipleResourcesAsBase64([attrs[i].value]);
+                        attrs[i].value = fetchedResources[0].resourceBase64;
+                        
+                    } else if (attrs[i].name === "style") {
+                        attrs[i].value = await inlineCssText(attrs[i].value);
+                    }
+                }
+            }
+        }
+
+        /**
+         * 
+         * @param {CSSStyleSheet} node
+         *
+        const inlineStyleSheet = async function(node) {
+            for(let i=0; i<node.cssRules.length; i++) {
+                const rule = node.cssRules[i];
+                if (!rule.conditionText) {
+                    for(let prop in rule.style) {
+                        if(!Number.isNaN(Number.parseInt(prop))) {
+                            let value = rule.style.getPropertyValue(rule.style[prop]);
+                            if (value.substr(0, 3).toLowerCase() === "url") {
+                                rule.style.setProperty(rule.style[prop], await inlineCssText(value));
+                            }
+                        }
+                    }
+
+                } else if (window.matchMedia(rule.conditionText).matches) {
+                    await inlineStyleSheet(rule);
+                }
+            }
+        }
+        */
+
+        /**
+         * 
          * @param {StyleSheet} styleSheet
          * @returns {String|urlList}
          */
-        const findUrlsInCss = function(styleSheet) {
-            let cssStyles = "";
-            let urlsFoundInCss = [];
+        const outlineStylesheet = async function(styleSheet) {
+            return new Promise(async function(resolve, reject) {
+                let cssStyles = "";
+                for(let i=0; i<styleSheet.cssRules.length; i++) {
+                    const rule = styleSheet.cssRules[i];
+                    if (!rule.conditionText) {
+                        cssStyles += await inlineCssText(rule.cssText) + " \n";
 
-            for(let i=0; i<styleSheet.cssRules.length; i++) {
-                const rule = styleSheet.cssRules[i];
-                if (!rule.conditionText) {
-                    const cssText = rule.cssText
-                    urlsFoundInCss.push( ...getUrlsFromCssString(cssText) );
-                    cssStyles += cssText + "\n ";
-                    
-                } else if (window.matchMedia(rule.conditionText).matches) {
-                    const urlList = findUrlsInCss(rule);
-                    urlsFoundInCss.push( ...urlList.urls );
-                    cssStyles += urlList.cssText;
+                    } else if (window.matchMedia(rule.conditionText).matches) {
+                        cssStyles += await outlineStylesheet(rule);
+                    }
+
+                    cssStyles=cssStyles;
                 }
-            }
 
-            return {cssText: cssStyles, urls: urlsFoundInCss};
+                resolve(cssStyles);
+            });
         }
-
+        
         /**
          * 
          * @returns {Promise<String>}
          */
         this.toSvg = async function() {
-
             return new Promise(async function(resolve, reject) {
-
-                let head = document.getElementsByTagName('head')[0];
-                head.insertBefore(base, head.childNodes[0]);
                 
-                let cssStyles = "";
-                let urlsFoundInCss = [];
+                
+                /*
+                // inline style sheets
+                let doc = iframe.contentDocument.cloneNode(true);
+                let contentHead = doc.getElementsByTagName('head')[0];
+                let styleElem = doc.createElement("style");
+                contentHead.appendChild(styleElem);
 
+                let cssList = []                
+                let styleSheets = iframe.contentDocument.styleSheets;
                 for (let i=0; i<styleSheets.length; i++) {
-                    const urlList = findUrlsInCss(styleSheets[i]);
-                    urlsFoundInCss.push( ...urlList.urls );
-                    cssStyles += urlList.cssText;
+                    await inlineStyleSheet(styleSheets[i]);
+                    for(let j=0; j<styleSheets[i].cssRules.length; j++)
+                        cssList.push(styleSheets[i].cssRules[j].cssText);
                 }
 
-                const fetchedResourcesFromStylesheets = await getMultipleResourcesAsBase64(urlsFoundInCss);
-                for(let i=0; i<fetchedResourcesFromStylesheets.length; i++) {
-                    const r = fetchedResourcesFromStylesheets[i];
-                    cssStyles = cssStyles.replace(new RegExp(escapeRegExp(r.resourceUrl),"g"), r.resourceBase64);
-                }
+                for(let i=0; i<cssList.length; i++)
+                    styleElem.appendChild(doc.createTextNode(cssList[i]));
+                */
 
-                let urlsFoundInHtml = getImageUrlsFromFromHtml(contentHtml).concat(getUrlsFromCssString(contentHtml));
-                const fetchedResources = await getMultipleResourcesAsBase64(urlsFoundInHtml);
-                for(let i=0; i<fetchedResources.length; i++) {
-                    const r = fetchedResources[i];
-                    contentHtml = contentHtml.replace(new RegExp(escapeRegExp(r.resourceUrl),"g"), r.resourceBase64);
-                }
-
-                base.remove();
-
+                // outline styles
+                var cssStyles = "";
+                let styleSheets = iframe.contentDocument.styleSheets;
+                for (let i=0; i<styleSheets.length; i++)
+                    cssStyles += await outlineStylesheet(styleSheets[i]);
+                
                 // create DOM element string that encapsulates style
                 const styleElem = document.createElement("style");
                 styleElem.innerHTML = cssStyles;
-
                 const styleElemString = new XMLSerializer().serializeToString(styleElem);
+                
+                // inline body attributes
+                let bodyElem = iframe.contentDocument.body.cloneNode(true);
+                
+                inlineAttributes(bodyElem);
+                let elements = bodyElem.getElementsByTagName("*");
+                for(let i=0; i < elements.length; i++)
+                    await inlineAttributes(elements[i]);
 
-                // create DOM element string that encapsulates body
-                const contentRootElem = document.createElement("body");
-                contentRootElem.innerHTML = contentHtml;
-                //contentRootElem.setAttribute("xmlns", "http://www.w3.org/1999/xhtml");
-
-                const contentRootElemString = new XMLSerializer().serializeToString(contentRootElem);
-
+                const bodyElemString = new XMLSerializer().serializeToString(bodyElem);
+                
                 const svg = `
                     <svg xmlns='http://www.w3.org/2000/svg' width='${width}' height='${height}'>
                         <g transform='translate(0, 0) rotate(0)'>
@@ -242,7 +297,7 @@ const renderHtml = function() {
                                     <head>
                                         ${styleElemString}
                                     </head>
-                                    ${contentRootElemString}
+                                    ${bodyElemString}
                                 </html>
                             </foreignObject>
                         </g>
@@ -251,6 +306,13 @@ const renderHtml = function() {
 
                 const unescapedSvg = unescape(encodeURIComponent(svg));
                 const dataUri = `data:image/svg+xml;base64,${window.btoa(unescapedSvg)}`;
+
+                if (removeIframe) {
+                    iframe.remove();
+                    if (base)
+                        base.remove();
+                }
+                    
 
                 resolve(dataUri);                    
             });
@@ -304,29 +366,19 @@ const renderHtml = function() {
     };
 
     let setSource = {
-        fromIframe: function(iframe, removeIframe, base) {
-            if (!base) {
-                base = document.createElement('base');
-                base.href = iframe.src;
-            }
-            
-            let contentDocument = iframe.contentDocument;
-            let styleSheets = contentDocument.styleSheets;
-            let contentHtml = contentDocument.body.innerHTML;
-            
-            let body = contentDocument.body;
-            let width = body.scrollLeft + body.scrollWidth;
-            let height = body.scrollTop + body.scrollHeight;
-            
-            if (removeIframe)
-                iframe.remove();
-            
-            return new ForeignHtmlRenderer(contentHtml, styleSheets, base, width, height);
+        fromIframe: async function(iframe, base, removeIframe) {
+            return new Promise(async function(resolve, reject) {
+                const body = iframe.contentDocument.body;
+                const width = body.scrollLeft + body.scrollWidth;
+                const height = body.scrollTop + body.scrollHeight;
+                
+                resolve(new ForeignHtmlRenderer(iframe, base, width, height, removeIframe));
+            });
         },
         
         fromString: async function(strHtml, baseUrl) {
             return new Promise(async function(resolve, reject) {
-                var base = undefined;
+                var base;
                 if (baseUrl) {
                     base = document.createElement('base');
                     base.href = baseUrl;
@@ -338,25 +390,22 @@ const renderHtml = function() {
                 iframe.style.visibility = "hidden";
                 document.body.appendChild(iframe);
                 
-                iframe.onload = function () {
-                    if (baseUrl)
-                        base.remove();
-                    
-                    resolve(setSource["fromIframe"](iframe, true, base));
-                }
+                iframe.onload = async function () {
+                    resolve(await setSource["fromIframe"](iframe, base, true));
+                };
                 
                 iframe.srcdoc = strHtml;
             });
         },
         
-        fromFile: async function(url) {
+        fromFile: async function(urlHtml) {
             return new Promise(async function(resolve, reject) {
                 const xhr = new XMLHttpRequest();
-                xhr.open("GET", url);
+                xhr.open("GET", urlHtml);
 
                 xhr.onreadystatechange = async function() {
                     if(xhr.readyState === 4 && xhr.status === 200) {
-                        resolve(await setSource["fromString"](xhr.response, url))
+                        resolve(await setSource["fromString"](xhr.response, urlHtml))
                     }
                 };
 
