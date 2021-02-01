@@ -39,13 +39,4 @@ Under folder `/test/` we may find some live use example. We may play with `/test
 
 ## Test cases
 
-The library has been tested, and works on the following platforms:
-
-- Linux
-    - Chrommium
-    - Firefox
-    - Opera
-- Android
-    - Chrome
-    - Samsung Internet Browser
-
+The library still needs to be tested.
