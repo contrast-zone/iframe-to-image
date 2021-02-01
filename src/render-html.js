@@ -324,7 +324,7 @@ const renderHtml = function() {
             return new ForeignHtmlRenderer(contentHtml, styleSheets, base, width, height);
         },
         
-        fromString: function(strHtml, baseUrl) {
+        fromString: async function(strHtml, baseUrl) {
             return new Promise(async function(resolve, reject) {
                 var base = undefined;
                 if (baseUrl) {
