@@ -33,10 +33,10 @@ renderHtml.inputFormat(...).outputFormat()
 In a specific example, if we want to render HTML file `test-file.html` to base64png and specify it as a `src` attribute of an `image` element, we write:
 
 ```js
-    renderHtml.fromFile('test-file.html').toBase64Png()
-        .then((base64png) => {
-            document.getElementById('image').src = base64png;
-        });
+renderHtml.fromFile('test-file.html').toBase64Png()
+    .then((base64png) => {
+        document.getElementById('image').src = base64png;
+    });
 ```
 
 Under the folder `/test/` we may find some live use example. We may play with `/test/index.html` and `/test/example1/index.html` in an editor and test it in a browser to see the result (we may need a HTTP server to do this because *render-html.js* employs AJAX calls).
