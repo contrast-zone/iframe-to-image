@@ -7,8 +7,8 @@ This is a fork of [svg-foreignobject-screenshot](https://github.com/aautar/svg-f
 We use *render-html.js* library by including Javascript code file `/src/render-html.js`. To convert HTML content to images, we use the following Javascript notation: 
 
 - We concatenate the following fragments by `.`:
-    - We start with the library function call:
-        - `renderHtml()`
+    - We start with the library object:
+        - `renderHtml`
     - Then we concatenate one of the input formats:
         - `fromIframe(...)`
         - `fromString(...)`
@@ -23,14 +23,14 @@ We use *render-html.js* library by including Javascript code file `/src/render-h
 
 In a general example, we combine inputs and outputs as in the following pattern:
 
-    renderHtml().inputFormat(...).outputFormat()
+    renderHtml.inputFormat(...).outputFormat()
         .then((output) => {
             ... = output;
         });
 
 In a specific example, if we want to render HTML file `test-file.html` to base64png and specify it as a `src` attribute of an `image` element, we write:
 
-    renderHtml().fromFile('test-file.html').toBase64Png()
+    renderHtml.fromFile('test-file.html').toBase64Png()
         .then((base64png) => {
             document.getElementById('image').src = base64png;
         });
@@ -39,4 +39,4 @@ Under the folder `/test/` we may find some live use example. We may play with `/
 
 ## Test cases
 
-The library still needs to be tested. At the time of writing, Safari had some allegedly *"to-work-around-render-it-twice"* struggles with it.
+The library still needs to be tested. At the time of writing, Safari had some allegedly "to-work-around-render-it-twice" struggles with it.
